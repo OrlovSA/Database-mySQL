@@ -1,3 +1,0 @@
-1 - mysqldump -u root -p example > C:\mysql\dump\example.sql
-2 - mysql -u root sample < C:\mysql\dump\example.sql
-3 - mysqldump -u root -p --where="true limit 100" mysql help_keyword > C:\mysql\dump\1.sql

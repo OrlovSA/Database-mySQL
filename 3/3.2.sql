@@ -18,7 +18,8 @@ create table users(
 	photo_id bigint unsigned comment 'аватарку пользователя', -- bigint числовое значение 64 бит, unsigned запрешает отрицательные
 																		-- числа и сдвигает возможное числа на половину в +
 	created_at datetime default now() comment 'Вреям строки сообщения', -- получает системное время при создании строки по умолчанию с учетом часового пояса
-	pass char(30) comment 'пароль пользоватея' 
+	pass char(30) comment 'пароль пользоватея', 
+	likes int default null
 ) comment 'таблица с пользователями';
 
 alter table users add index (phone);  -- добавляем индекс
@@ -39,10 +40,11 @@ create table messages(
 	from_user_id bigint unsigned not null comment 'добавляем пользователя написавшего сообщение', -- not null проверяем что значение не равняется ничему null, иначе ошибка
 	to_user_id bigint unsigned not null comment 'добавляем пользователя кому пишет сообщение',
 	message text not null comment 'сообщение', -- еще один типо хранения текстовых на подобие varchar
-	is_read bool default 0, -- булевое со значением по умалчанию 0
-	created_at datetime default now() comment 'Вреям строки сообщения',
+	is_read bool default 0, -- булевое со значением по умолчанию 0
+	created_at datetime default now() comment 'время строки сообщения',
 	foreign key (from_user_id) references users(id) , -- берем для строки from_user_id из таблици users и строки (id) данные о пользователе (если их там нет вернет null)
-	foreign key (to_user_id) references users(id)
+	foreign key (to_user_id) references users(id),
+	likes int default null
 ) comment 'таблица с сообщениями';
 
 alter table messages add index messages_from_user_id (from_user_id); 
@@ -55,7 +57,7 @@ create table friend_requests(
 	status enum('requested', 'approved', 'unfriended', 'declined'), -- enum список пеерменных также может принемать значение "" =  0 или Null
 	requested_at datetime default now() comment 'Вреям строки сообщения',
 	confirmed_at datetime default current_timestamp on update current_timestamp,
-	primary key(initiator_user_id, target_user_id), -- создаем в строке записи 2х участников по умолчанию
+	primary key(initiator_user_id, target_user_id), -- создаем в строке уникальную записи из 2х переменных 
 	index (initiator_user_id),-- индексируем
 	index (target_user_id),
 	foreign key (initiator_user_id) references users(id),
@@ -87,7 +89,8 @@ create table posts(
 	metadata json,
 	created_at datetime default current_timestamp,
 	updated_at datetime default current_timestamp on update current_timestamp,
-	foreign key (user_id) references users(id)
+	foreign key (user_id) references users(id),
+	likes int default null
 ) comment 'посты';
 
 drop table if exists comments;
@@ -99,7 +102,8 @@ create table comments (
 	created_at datetime default current_timestamp,
 	updated_at datetime default current_timestamp on update current_timestamp,
 	foreign key (user_id) references users(id),
-	foreign key (post_id) references posts(id)
+	foreign key (post_id) references posts(id),
+	likes int default null
 ) comment 'коменты под пост';
 
 -- добавил коменты под коментами
@@ -112,7 +116,8 @@ create table comments_comments (
 	created_at datetime default current_timestamp,
 	updated_at datetime default current_timestamp on update current_timestamp,
 	foreign key (user_id) references users(id),
-	foreign key (comments_id) references comments(id)
+	foreign key (comments_id) references comments(id),
+	likes int default null
 ) comment 'коменты коментов';
 
 drop table if exists photos;
@@ -122,6 +127,61 @@ create table photos(
 	user_id bigint unsigned not null,
 	description text,
 	created_at datetime default current_timestamp,
-	foreign key (user_id) references users(id)
-);
+	foreign key (user_id) references users(id),
+	likes int default null
+) comment 'фото';
 
+drop table if exists likes_posts;
+create table likes_posts(
+	user_id bigint unsigned not null,
+	post_id bigint unsigned not null,
+	primary key(user_id, post_id),
+	created_at datetime default current_timestamp,
+	updated_at datetime default current_timestamp on update current_timestamp,
+	foreign key (user_id) references users(id),
+	foreign key (post_id) references posts(id)
+) comment 'лайки поста';
+
+drop table if exists likes_users;
+create table likes_users (
+	user_id bigint unsigned not null,
+	user_id_to bigint unsigned not null,
+	primary key(user_id, user_id_to),
+	created_at datetime default current_timestamp,
+	updated_at datetime default current_timestamp on update current_timestamp,
+	foreign key (user_id) references users(id),
+	foreign key (user_id_to) references users(id)
+) comment 'лайки пользователей';
+
+drop table if exists likes_comments;
+create table likes_comments (
+	user_id bigint unsigned not null,
+	comments_id bigint unsigned not null,
+	primary key(user_id, comments_id),
+	created_at datetime default current_timestamp,
+	updated_at datetime default current_timestamp on update current_timestamp,
+	foreign key (user_id) references users(id),
+	foreign key (comments_id) references comments(id)
+) comment 'лайки коментариев';
+
+drop table if exists likes_comments_comments;
+create table likes_comments_comments (
+	user_id bigint unsigned not null,
+	comments_comments_id bigint unsigned not null,
+	primary key(user_id, comments_comments_id),
+	created_at datetime default current_timestamp,
+	updated_at datetime default current_timestamp on update current_timestamp,
+	foreign key (user_id) references users(id),
+	foreign key (comments_comments_id) references comments_comments(id)
+) comment 'лайки подкоментов';
+
+drop table if exists likes_photos;
+create table likes_photos (
+	user_id bigint unsigned not null,
+	photos_id bigint unsigned not null,
+	primary key(user_id, photos_id),
+	created_at datetime default current_timestamp,
+	updated_at datetime default current_timestamp on update current_timestamp,
+	foreign key (user_id) references users(id),
+	foreign key (photos_id) references photos(id)
+) comment 'лайки фото';
